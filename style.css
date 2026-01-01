@@ -1,39 +1,89 @@
+/* --------------------------------------------------------
+   Base Reset
+-------------------------------------------------------- */
 html, body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
   background: #70c5ce;
   overflow: hidden;
-}
-
-#menu {
-  position: absolute;
   width: 100%;
   height: 100%;
+  touch-action: manipulation; /* Prevents iPhone double-tap zoom */
+}
+
+/* --------------------------------------------------------
+   Menu Screen
+-------------------------------------------------------- */
+#menu {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
   text-align: center;
-  padding-top: 60px;
   background: #70c5ce;
 }
 
 #menu h1 {
-  font-size: 48px;
+  font-size: 56px;
   color: white;
   margin-bottom: 10px;
+  text-shadow: 0px 2px 4px rgba(0,0,0,0.25);
 }
 
-#menu input, #menu button {
-  padding: 10px 15px;
-  margin-top: 10px;
-  font-size: 18px;
-}
-
-#menu p.hint {
-  margin-top: 30px;
-  font-size: 14px;
+#menu p {
   color: #fff;
+  font-size: 18px;
+  margin: 5px 0 15px 0;
 }
 
+/* Hint text */
+#menu .hint {
+  margin-top: 30px;
+  font-size: 15px;
+  color: #e9f7ff;
+  opacity: 0.9;
+}
+
+/* --------------------------------------------------------
+   Inputs / Buttons
+-------------------------------------------------------- */
+#menu input,
+#menu button {
+  padding: 12px 18px;
+  margin-top: 12px;
+  font-size: 20px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+}
+
+#menu button {
+  background: #ffdd4a;
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#menu button:active {
+  transform: scale(0.95);
+}
+
+/* --------------------------------------------------------
+   Game Canvas
+-------------------------------------------------------- */
 canvas {
-  display: none;
-  background: url('assets/bg.png') center / cover no-repeat;
+  display: none; /* Shown after clicking Play */
+  width: 100vw;
+  height: 100vh;
+
+  /* Background image from assets/bg.png */
+  background: url('assets/bg.png') center center / cover no-repeat;
 }
