@@ -8,7 +8,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // -------------------------------------------------------------
-// Music + Menu
+// Background Music + Menu Controls
 // -------------------------------------------------------------
 let bgMusic = new Audio();
 bgMusic.loop = true;
@@ -39,16 +39,17 @@ const birdSprites = [
   "assets/bird-flap1.png",
   "assets/bird-flap2.png"
 ];
-
 const birdFrames = birdSprites.map(src => {
   const img = new Image();
   img.src = src;
   return img;
 });
 
-const pipeTopImg = new Image(); pipeTopImg.src = "assets/pipe-top.png";
-const pipeBottomImg = new Image(); pipeBottomImg.src = "assets/pipe-bottom.png";
-const groundImg = new Image(); groundImg.src = "assets/ground.png";
+const pipeBottomImg = new Image(); 
+pipeBottomImg.src = "assets/pipe-bottom.png";
+
+const groundImg = new Image(); 
+groundImg.src = "assets/ground.png";
 
 // -------------------------------------------------------------
 // Bird Object
@@ -71,9 +72,9 @@ let pipes = [];
 let frames = 0;
 let score = 0;
 let level = 1;
-
 let gameSpeed = 2;
-let gap = 150; // Distance between pipes
+
+let gameOver = false;
 
 // -------------------------------------------------------------
 // Controls
@@ -82,48 +83,57 @@ canvas.addEventListener("click", flap);
 canvas.addEventListener("touchstart", flap);
 
 function flap() {
-  bird.velocity = bird.lift;
+  if (!gameOver) {
+    bird.velocity = bird.lift;
+  }
 }
 
 // -------------------------------------------------------------
-// Pipe Generation
+// Create Only BOTTOM Pipe
 // -------------------------------------------------------------
 function createPipe() {
-  const topHeight = Math.random() * (canvas.height * 0.45);
+  const pipeHeight = 100 + Math.random() * 200;
+
   pipes.push({
     x: canvas.width,
-    top: topHeight,
-    bottom: topHeight + gap,
+    height: pipeHeight,
     width: 80
   });
 }
 
 // -------------------------------------------------------------
-// Leveling System
+// Reset Game (return to menu button)
 // -------------------------------------------------------------
-function checkLevelUp() {
-  if (score === 10 && level === 1) {
-    level++;
-    gameSpeed++;
-    gap -= 20;
-  }
-  if (score === 25 && level === 2) {
-    level++;
-    gameSpeed++;
-    gap -= 20;
-  }
+function showGameOverScreen() {
+  gameOver = true;
+
+  // Freeze game
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#fff";
+  ctx.font = "48px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 40);
+
+  ctx.font = "28px Arial";
+  ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 5);
+  ctx.fillText("Tap to return to menu", canvas.width / 2, canvas.height / 2 + 55);
+
+  // Handle tap/click to return to menu
+  canvas.onclick = () => {
+    canvas.onclick = null;
+    resetToMenu();
+  };
 }
 
-// -------------------------------------------------------------
-// Reset
-// -------------------------------------------------------------
-function resetGame() {
+function resetToMenu() {
   pipes = [];
+  frames = 0;
   score = 0;
   level = 1;
   gameSpeed = 2;
-  gap = 150;
-  frames = 0;
+  gameOver = false;
 
   bird.y = canvas.height / 2;
   bird.velocity = 0;
@@ -131,119 +141,85 @@ function resetGame() {
   bgMusic.pause();
   bgMusic.currentTime = 0;
 
-  menu.style.display = "block";
   canvas.style.display = "none";
+  menu.style.display = "block";
 }
 
 // -------------------------------------------------------------
 // Start Game
 // -------------------------------------------------------------
 function startGame() {
+  pipes = [];
+  frames = 0;
+  score = 0;
+  gameOver = false;
+
+  bird.y = canvas.height / 2;
+  bird.velocity = 0;
+
   requestAnimationFrame(update);
-}
-
-// -------------------------------------------------------------
-// Collision Detection (improved)
-// -------------------------------------------------------------
-function birdHitsPipe(bird, pipe) {
-
-  const margin = 8; // shrink hitbox for accuracy
-
-  const birdLeft   = bird.x + margin;
-  const birdRight  = bird.x + bird.width - margin;
-  const birdTop    = bird.y + margin;
-  const birdBottom = bird.y + bird.height - margin;
-
-  const pipeLeft   = pipe.x;
-  const pipeRight  = pipe.x + pipe.width;
-
-  // Must overlap horizontally to collide
-  if (birdRight > pipeLeft && birdLeft < pipeRight) {
-
-    // Above gap
-    if (birdTop < pipe.top) return true;
-
-    // Below gap
-    if (birdBottom > pipe.bottom) return true;
-  }
-
-  return false;
 }
 
 // -------------------------------------------------------------
 // Update Loop
 // -------------------------------------------------------------
 function update() {
+  if (gameOver) return;
+
   frames++;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // ---- Bird physics ----
+  // ---- Bird Physics ----
   bird.velocity += bird.gravity;
   bird.y += bird.velocity;
 
-  // Prevent bird from floating off-screen top
-  if (bird.y < 0) bird.y = 0;
-
-  // Animate bird
   if (frames % 5 === 0) {
     bird.frame = (bird.frame + 1) % birdFrames.length;
   }
 
-  // Draw bird
-  ctx.drawImage(
-    birdFrames[bird.frame],
-    bird.x,
-    bird.y,
-    bird.width,
-    bird.height
-  );
+  ctx.drawImage(birdFrames[bird.frame], bird.x, bird.y, bird.width, bird.height);
 
-  // ---- Pipe creation ----
-  if (frames % 90 === 0) createPipe();
+  // ---- Create Pipes ----
+  if (frames % 100 === 0) createPipe();
 
-  // ---- Pipes movement + collision ----
+  // ---- Pipe Movement + Collision ----
   for (let i = pipes.length - 1; i >= 0; i--) {
     const p = pipes[i];
     p.x -= gameSpeed;
 
-    // Draw top pipe
-    ctx.drawImage(pipeTopImg, p.x, 0, p.width, p.top);
-
-    // Draw bottom pipe
+    // Draw Bottom Pipe Only
     ctx.drawImage(
       pipeBottomImg,
       p.x,
-      p.bottom,
+      canvas.height - p.height - 60,
       p.width,
-      canvas.height - p.bottom
+      p.height
     );
 
-    // Collision check
-    if (birdHitsPipe(bird, p)) {
-      return resetGame();
+    // Collision Detection
+    if (
+      bird.x + bird.width > p.x &&
+      bird.x < p.x + p.width &&
+      bird.y + bird.height > canvas.height - p.height - 60
+    ) {
+      return showGameOverScreen();
     }
 
-    // Remove pipes off-screen
     if (p.x + p.width < 0) {
       pipes.splice(i, 1);
       score++;
-      checkLevelUp();
     }
   }
 
-  // ---- Ground ----
-  ctx.drawImage(groundImg, 0, canvas.height - 60, canvas.width, 60);
-
-  // If bird hits ground → game over
+  // ---- Ground Collision ----
   if (bird.y + bird.height >= canvas.height - 60) {
-    return resetGame();
+    return showGameOverScreen();
   }
 
   // ---- Scoreboard ----
   ctx.fillStyle = "#fff";
   ctx.font = "24px Arial";
   ctx.fillText(`Score: ${score}`, 20, 40);
-  ctx.fillText(`Level: ${level}`, 20, 70);
 
   requestAnimationFrame(update);
 }
