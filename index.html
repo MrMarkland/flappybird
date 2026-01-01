@@ -1,25 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta charset="UTF-8" />
+
+<!-- Prevent zooming, improve mobile fullscreen -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
 <title>Floppy Bird Game</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css" />
+
+<!-- (Optional) Preload important game assets for smoother gameplay -->
+<link rel="preload" as="image" href="assets/bird.png" />
+<link rel="preload" as="image" href="assets/bird-flap1.png" />
+<link rel="preload" as="image" href="assets/bird-flap2.png" />
+<link rel="preload" as="image" href="assets/pipe-top.png" />
+<link rel="preload" as="image" href="assets/pipe-bottom.png" />
+<link rel="preload" as="image" href="assets/ground.png" />
+<link rel="preload" as="image" href="assets/bg.png" />
 </head>
+
 <body>
 
+<!-- ==============================
+     MENU SCREEN
+============================== -->
 <div id="menu">
   <h1>Floppy Bird</h1>
   <p>Welcome! Upload your music and press Play</p>
 
-  <input type="file" id="musicUpload" accept="audio/*">
+  <input type="file" id="musicUpload" accept="audio/*" />
+
+  <!-- Touch-friendly button -->
   <button id="playBtn">Play Game</button>
 
   <p class="hint">Rotate your phone to landscape ↔️ for best play</p>
 </div>
 
+<!-- ==============================
+     GAME CANVAS
+============================== -->
 <canvas id="gameCanvas"></canvas>
 
+<!-- ==============================
+     GAME SCRIPT
+============================== -->
 <script src="game.js"></script>
 </body>
 </html>
