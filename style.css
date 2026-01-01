@@ -33,17 +33,6 @@ html, body {
   color: #fff;
 }
 
-canvas {
-  display: none;
-  background: url('data:image/png;base64,
-iVBORw0KGgoAAAANSUhEUgAAAZAAAADwCAYAAACtF2NkAAAACXBIWXMAAAsTAAALEwEAmpwYAAAI
-F0lEQVR4nO3dMZMdRRSF4U+QREeAIiEUPgCQQIowMT+gYKBg4iJmKERCw0fABBRAYQWHBhBAYGBh
-AAhERwUFGW1VZtvd0rLb3rvdK7s7r1Z6+vVr33rS/uZv+33Xd9+j4+Pj8fj8fHx8vj8fHx8fj8fH
-x8vj8fHx8fj8fHx8fj8fHx8vj8fHx8fj8fHx8vj8fHx8fj8fHx8vj8fHx8fj8fHx8vj8fHx8fj8f
-Hx8vj8fHx8fj8fHx8vn7+Pb2+v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+
-/v7+/v7+/v7+/v7+/v7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e
-3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3
-t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t
-7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t7e3t/3y3AbI3D
-NPr3xUAAAAASUVORK5CYII=') center / cover no-repeat;
+canvas { 
+  background: url('assets/bg.png') center / cover no-repeat;
 }
