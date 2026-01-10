@@ -1,4 +1,27 @@
 // -------------------------------------------------------------
+// 6G Telemetry Logger
+// -------------------------------------------------------------
+const Telemetry = {
+  sessionId: crypto.randomUUID(),
+  startTime: performance.now(),
+  tick: 0,
+  stateHz: 30, // 20–60 Hz allowed
+  buffer: [],
+
+  log(event) {
+    this.buffer.push(event);
+  },
+
+  export() {
+    console.log("SESSION DATA:", JSON.stringify(this.buffer, null, 2));
+    // Later → POST to backend / WebSocket / QUIC
+  }
+};
+
+
+
+
+// -------------------------------------------------------------
 // Canvas Setup
 // -------------------------------------------------------------
 const canvas = document.getElementById("gameCanvas");
