@@ -1,5 +1,70 @@
 // -------------------------------------------------------------
-// 6G Telemetry Logger (EDGE / UE SIDE)
+// Floppy Bird + 6G Telemetry Logger (EDGE / UE SIDE)
+// Includes:
+//  1) POST /session/start
+//  2) WebSocket wss://.../ws/telemetry (stream events)
+//  3) POST /session/end
+// -------------------------------------------------------------
+
+// ------------------------------
+// CONFIG (DigitalOcean endpoints)
+// ------------------------------
+const DO_HTTP_BASE = "https://YOUR-DO-URL";      // e.g. https://api.yourdomain.com
+const DO_WS_URL = "wss://YOUR-DO-URL/ws/telemetry"; // e.g. wss://api.yourdomain.com/ws/telemetry
+
+// -------------------------------------------------------------
+// OPTIONAL WebSocket uplink (DigitalOcean ready)
+// -------------------------------------------------------------
+const TelemetryStream = {
+  socket: null,
+  isOpen: false,
+
+  connect() {
+    try {
+      this.socket = new WebSocket(DO_WS_URL);
+
+      this.socket.addEventListener("open", () => {
+        this.isOpen = true;
+        // Optional: identify immediately
+        if (Telemetry.sessionId) {
+          this.send({
+            type: "ws_hello",
+            session_id: Telemetry.sessionId,
+            timestamp: performance.now()
+          });
+        }
+      });
+
+      this.socket.addEventListener("close", () => {
+        this.isOpen = false;
+      });
+
+      this.socket.addEventListener("error", () => {
+        this.isOpen = false;
+      });
+    } catch (e) {
+      this.isOpen = false;
+    }
+  },
+
+  send(packet) {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(packet));
+    }
+  },
+
+  close() {
+    try {
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.socket.close();
+      }
+    } catch (_) {}
+    this.isOpen = false;
+  }
+};
+
+// -------------------------------------------------------------
+// Telemetry
 // -------------------------------------------------------------
 const Telemetry = {
   sessionId: crypto.randomUUID(),
@@ -12,34 +77,14 @@ const Telemetry = {
   log(event) {
     this.buffer.push(event);
 
-    // OPTIONAL: real-time uplink (enable later)
-    // TelemetryStream.send(event);
+    // Real-time uplink (enabled)
+    TelemetryStream.send(event);
   },
 
   export() {
-    console.log(
-      "SESSION DATA:",
-      JSON.stringify(this.buffer, null, 2)
-    );
+    console.log("SESSION DATA:", JSON.stringify(this.buffer, null, 2));
   }
 };
-
-// -------------------------------------------------------------
-// OPTIONAL WebSocket uplink (DigitalOcean ready)
-// -------------------------------------------------------------
-/*
-const TelemetryStream = {
-  socket: null,
-  connect() {
-    this.socket = new WebSocket("wss://YOUR_DO_DOMAIN/ws");
-  },
-  send(packet) {
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(packet));
-    }
-  }
-};
-*/
 
 // -------------------------------------------------------------
 // Canvas Setup
@@ -67,11 +112,12 @@ musicUpload.addEventListener("change", (e) => {
   }
 });
 
-playBtn.addEventListener("click", () => {
+// IMPORTANT: make this async because startGame() now starts backend session
+playBtn.addEventListener("click", async () => {
   menu.style.display = "none";
   canvas.style.display = "block";
   if (bgMusic.src) bgMusic.play();
-  startGame();
+  await startGame();
 });
 
 // -------------------------------------------------------------
@@ -83,7 +129,7 @@ const birdSprites = [
   "assets/bird-flap2.png"
 ];
 
-const birdFrames = birdSprites.map(src => {
+const birdFrames = birdSprites.map((src) => {
   const img = new Image();
   img.src = src;
   return img;
@@ -130,11 +176,11 @@ function flap(inputType) {
 
   Telemetry.log({
     type: "input",
-    sessionId: Telemetry.sessionId,
+    session_id: Telemetry.sessionId,
     timestamp: performance.now(),
     input: inputType,
-    birdY: bird.y,
-    birdVelocity: bird.velocity
+    bird_y: bird.y,
+    velocity: bird.velocity
   });
 }
 
@@ -152,23 +198,72 @@ function createPipe() {
 }
 
 // -------------------------------------------------------------
+// Backend helpers: session start/end
+// -------------------------------------------------------------
+async function startBackendSession() {
+  try {
+    const res = await fetch(`${DO_HTTP_BASE}/session/start`, {
+      method: "POST"
+    });
+
+    const data = await res.json();
+    if (data && data.session_id) {
+      Telemetry.sessionId = data.session_id;
+    }
+  } catch (err) {
+    console.error("Session start failed:", err);
+    // fallback: keep local UUID in Telemetry.sessionId
+  }
+}
+
+function endBackendSession({ session_id, score, duration }) {
+  // Fire-and-forget (do not block UI)
+  fetch(`${DO_HTTP_BASE}/session/end`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id,
+      score,
+      duration
+    })
+  }).catch((err) => {
+    console.error("Session end failed:", err);
+  });
+}
+
+// -------------------------------------------------------------
 // Game Over Screen
 // -------------------------------------------------------------
 function showGameOverScreen(reason) {
   gameOver = true;
 
+  const durationMs = performance.now() - Telemetry.startTime;
+
+  // Log outcome (also streams via WS)
   Telemetry.log({
     type: "outcome",
-    sessionId: Telemetry.sessionId,
+    session_id: Telemetry.sessionId,
     timestamp: performance.now(),
     event: "game_over",
     reason,
-    finalScore: score,
-    durationMs: performance.now() - Telemetry.startTime
+    final_score: score,
+    duration_ms: durationMs
   });
 
+  // End backend session (added code #3)
+  endBackendSession({
+    session_id: Telemetry.sessionId,
+    score,
+    duration: durationMs
+  });
+
+  // Close WebSocket (optional but clean)
+  TelemetryStream.close();
+
+  // Local export to console
   Telemetry.export();
 
+  // UI
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -209,7 +304,7 @@ function resetToMenu() {
 // -------------------------------------------------------------
 // Start Game
 // -------------------------------------------------------------
-function startGame() {
+async function startGame() {
   pipes = [];
   frames = 0;
   score = 0;
@@ -222,6 +317,20 @@ function startGame() {
   Telemetry.tick = 0;
   Telemetry.buffer = [];
   Telemetry.lastStateLog = 0;
+
+  // 1) Start backend session (added code #1)
+  await startBackendSession();
+
+  // 2) Open WebSocket uplink (added code #2)
+  TelemetryStream.connect();
+
+  // Optional: log session start event
+  Telemetry.log({
+    type: "session_start",
+    session_id: Telemetry.sessionId,
+    timestamp: performance.now(),
+    state_hz: Telemetry.stateHz
+  });
 
   requestAnimationFrame(update);
 }
@@ -285,14 +394,16 @@ function update() {
   if (now - Telemetry.lastStateLog >= 1000 / Telemetry.stateHz) {
     Telemetry.tick++;
 
+    // If you ever add "pipe_gap" back (classic flappy),
+    // compute it here. For now we stream existing state.
     Telemetry.log({
       type: "state",
-      sessionId: Telemetry.sessionId,
+      session_id: Telemetry.sessionId,
       timestamp: now,
       tick: Telemetry.tick,
-      birdY: bird.y,
-      birdVelocity: bird.velocity,
-      pipes: pipes.map(p => ({ x: p.x, height: p.height })),
+      bird_y: bird.y,
+      velocity: bird.velocity,
+      pipes: pipes.map((p) => ({ x: p.x, height: p.height })),
       score
     });
 
